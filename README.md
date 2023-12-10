@@ -17,8 +17,8 @@ The tool provides a flexible and fluent API for building queries and scans, maki
 Clone the repository and build the project:
 
 ```bash
-git clone https://github.com/your/repo.git
-cd aws-utils-dotnet-dynamodb
+git clone https://github.com/pedroalejandropt/aws-net-tools
+cd aws-net-tools
 dotnet build
 ```
 

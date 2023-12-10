@@ -1,5 +1,4 @@
-# AWS Utils for .NET DynamoDB Tool
-
+# AWS Utils for .NET
 ## Overview
 
 This is a .NET tool designed to simplify interactions with AWS. At the moment this tool offer a solution to interact with DynamoDB. 

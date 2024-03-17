@@ -2,6 +2,8 @@
 namespace aws
 {
     using aws.utils.dynamodb;
+    using models;
+
     class Program
     {
         /// <summary>
@@ -10,34 +12,40 @@ namespace aws
         /// </summary>
         static void Main(string[] args)
         {
-            // If the dynamodb table does not exist this piece of code will create it
-            // If the dynamodb table exists, the code will fail.
-            // DynamoDBBuilder builder = new DynamoDBBuilder("TestTable2");
-            // builder.AddSchema("pk", "HASH")
+            //If the dynamodb table does not exist this piece of code will create it
+            //If the dynamodb table exists, the code will fail.
+            // DynamoDBBuilder builder = new DynamoDBBuilder("Sample");
+            // builder
+            //     .AddSchema("pk", "HASH")
             //     .AddSchema("sk", "RANGE")
             //     .AddDefinition("pk", "S")
             //     .AddDefinition("sk", "S")
             //     .AddDefinition("Name", "S")
             //     .AddDefinition("LastName", "S")
+            //     .AddDefinition("Age", "S")
             //     .SetProvisionedThroughput(1,1)
-            //     .AddSecondaryIndex("TestIndex", "Name", "RANGE", "ALL")
+            //     .AddSecondaryIndex("SampleIndex", "Name", "RANGE", "ALL")
             //     .AddSecondaryIndex("TestIndex2", "LastName", "RANGE", "ALL")
             //     .CreateTable();
 
             // If the sk is not in the dynamodb table, this piece of code will create a new record
             // if it exists it will update the previous record
             Console.WriteLine("Start Add/Update Item!");
-            DynamoDBCommandBuilder build = new DynamoDBCommandBuilder("TestTable2")
+            
+            DynamoDBCommandBuilder build = new DynamoDBCommandBuilder("Sample")
                 .AddAttribute("pk", "Id")
-                .AddAttribute("sk", "3")
-                .AddAttribute("Name", "Anne")
-                .AddAttribute("LastName", "Rolo");
+                .AddAttribute("sk", "2")
+                .AddAttribute("Name", "Pedro")
+                .AddAttribute("LastName", "Pacheco")
+                .AddAttribute("Age", "26");
+
 
             build.AddUpdateItem();
+            
             Console.WriteLine("End Add/Update Item!");
 
             Console.WriteLine("Start Query!");
-            DynamoDBCommandBuilder queryBuilder = new DynamoDBCommandBuilder("TestTable")
+            DynamoDBCommandBuilder queryBuilder = new DynamoDBCommandBuilder("Sample")
                 .AddKeyCondition("pk", "User")
                 .MustEqualFilter("Name", "Pedro")
                 .MustEqualFilter("LastName", "Pacheco")
@@ -54,8 +62,25 @@ namespace aws
             });
             Console.WriteLine("End Query!");
 
+            Console.WriteLine("Start Sample Query!");
+            DynamoDBCommandBuilder querySampleBuilder = new DynamoDBCommandBuilder("Sample")
+                .AddKeyCondition("pk", "Id")
+                .AddKeyCondition("sk", "1");
+            
+            var querySampleRes = querySampleBuilder.ExecuteQuery<Sample>();
+            
+            querySampleRes.Result?.ForEach(item => {
+                Console.WriteLine();
+                Console.WriteLine($"Partition key: {item.Id}");
+                Console.WriteLine($"Sort key: {item.IdValue}");
+                Console.WriteLine($"Name: {item.Name}");
+                Console.WriteLine($"LastName: {item.LastName}");
+                Console.WriteLine();
+            });
+            Console.WriteLine("End Sample Query!"); 
+
             Console.WriteLine("Start Scan!");
-            DynamoDBCommandBuilder scanBuilder = new DynamoDBCommandBuilder("TestTable")
+            DynamoDBCommandBuilder scanBuilder = new DynamoDBCommandBuilder("Sample")
                 .MustEqualFilter("Name", "Pedro")
                 .MustEqualFilter("LastName", "Pacheco")
                 .CouldEqualFilter("Age", "26");
@@ -70,6 +95,22 @@ namespace aws
                 Console.WriteLine();
             });
             Console.WriteLine("End Scan!");
+
+            Console.WriteLine("Start Sample Scan!");
+            DynamoDBCommandBuilder scanSampleBuilder = new DynamoDBCommandBuilder("Sample")
+                .MustEqualFilter("Name", "Pedro")
+                .MustEqualFilter("LastName", "Pacheco");
+            
+            var scanSampleRes = scanSampleBuilder.ExecuteScan<Sample>();
+            scanSampleRes.Result?.ForEach(item => {
+                Console.WriteLine();
+                Console.WriteLine($"Partition key: {item.Id}");
+                Console.WriteLine($"Sort key: {item.IdValue}");
+                Console.WriteLine($"Name: {item.Name}");
+                Console.WriteLine($"LastName: {item.LastName}");
+                Console.WriteLine();
+            });
+            Console.WriteLine("End Sample Scan!");
         }
     }
 }

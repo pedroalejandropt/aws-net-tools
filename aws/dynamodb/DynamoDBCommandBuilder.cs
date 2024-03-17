@@ -22,6 +22,7 @@ namespace aws.utils.dynamodb
         public Dictionary<string, AttributeValue> AttributeValues = new Dictionary<string, AttributeValue>();
         public Dictionary<string, string> AttributeNames = new Dictionary<string, string>();
         public string FilterExpression = string.Empty;
+        public string ConditionExpression = string.Empty;
 
         public DynamoDBCommandBuilder MustEqualFilter<T>(string attribute, T value) {
             return AddFilter<T>("EQ", true, attribute, value);
@@ -143,6 +144,11 @@ namespace aws.utils.dynamodb
             return this;
         }
 
+        public DynamoDBCommandBuilder SetAttrNotExistCondition(string attribute) {
+            this.ConditionExpression = $"attribute_not_exists({attribute})" 
+            return this;
+        }
+
         public async Task<QueryResponse> ExecuteQuery()
         {
             AmazonDynamoDBClient client = new AmazonDynamoDBClient();
@@ -225,8 +231,20 @@ namespace aws.utils.dynamodb
                 Item = this.AttributeValues,
             };
 
-            await client.PutItemAsync(request);  
+            if (!string.IsNullOrWhiteSpace(this.ConditionExpression)) request.ConditionExpression = this.ConditionExpression;
 
+            try
+            {
+                var _ = await client.PutItemAsync(request);  
+            }
+            catch (ConditionalCheckFailedException conditionalCheckFailedException)
+            {
+                Console.WriteLine($"{conditionalCheckFailedException.Message}: Record already exist!.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Something goes wrong. ${e.Message}");
+            }
         }
 
         public async void DeleteItem()

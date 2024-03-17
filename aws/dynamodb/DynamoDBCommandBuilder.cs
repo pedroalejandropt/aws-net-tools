@@ -2,8 +2,12 @@ namespace aws.utils.dynamodb
 {
     using Amazon.DynamoDBv2;
     using Amazon.DynamoDBv2.Model;
+    using Amazon.DynamoDBv2.DocumentModel;
+    using Amazon.DynamoDBv2.DataModel;
     using Amazon.Runtime;
     using Amazon.Util;
+    using System;
+
     public class DynamoDBCommandBuilder 
     {
         public DynamoDBCommandBuilder(string tableName)
@@ -12,6 +16,7 @@ namespace aws.utils.dynamodb
         }
 
         private readonly string TableName;
+        private DynamoDBContext? Context;
         private string IndexName = string.Empty;
         public Dictionary<string, Condition> KeyConditions = new Dictionary<string, Condition>();
         public Dictionary<string, AttributeValue> AttributeValues = new Dictionary<string, AttributeValue>();
@@ -138,7 +143,6 @@ namespace aws.utils.dynamodb
             return this;
         }
 
-
         public async Task<QueryResponse> ExecuteQuery()
         {
             AmazonDynamoDBClient client = new AmazonDynamoDBClient();
@@ -157,6 +161,26 @@ namespace aws.utils.dynamodb
             return await client.QueryAsync(request);
         }
 
+        public async Task<List<T>> ExecuteQuery<T>() where T : class, new()
+        {
+            AmazonDynamoDBClient client = new AmazonDynamoDBClient();
+            this.Context = new DynamoDBContext(client);
+
+            QueryRequest request = new QueryRequest 
+            {
+                TableName = this.TableName,
+                KeyConditions = this.KeyConditions
+            };
+            
+            if (!string.IsNullOrWhiteSpace(this.IndexName)) request.IndexName = this.IndexName;
+            if (this.AttributeValues.Any()) request.ExpressionAttributeValues = this.AttributeValues;
+            if (this.AttributeNames.Any()) request.ExpressionAttributeNames = this.AttributeNames;
+            if (!String.IsNullOrWhiteSpace(this.FilterExpression)) request.FilterExpression = this.FilterExpression;
+
+            var response = await client.QueryAsync(request);
+            return ParseItems<T>(response.Items);
+        }
+
         public async Task<ScanResponse> ExecuteScan()
         {
             AmazonDynamoDBClient client = new AmazonDynamoDBClient();
@@ -173,17 +197,36 @@ namespace aws.utils.dynamodb
             return await client.ScanAsync(request);
         }
 
-        public async void AddUpdateItem()
+        public async Task<List<T>> ExecuteScan<T>() where T : class, new()
+        {
+            AmazonDynamoDBClient client = new AmazonDynamoDBClient();
+            this.Context = new DynamoDBContext(client);
+
+            ScanRequest request = new ScanRequest 
+            {
+                TableName = this.TableName,
+            };
+            
+            if (this.AttributeValues.Any()) request.ExpressionAttributeValues = this.AttributeValues;
+            if (this.AttributeNames.Any()) request.ExpressionAttributeNames = this.AttributeNames;
+            if (!String.IsNullOrWhiteSpace(this.FilterExpression)) request.FilterExpression = this.FilterExpression;
+
+            var response = await client.ScanAsync(request);
+            return ParseItems<T>(response.Items);
+        }
+
+        public async Task AddUpdateItem()
         {
             AmazonDynamoDBClient client = new AmazonDynamoDBClient();
 
             PutItemRequest request = new PutItemRequest 
             {
                 TableName = this.TableName,
-                Item = this.AttributeValues
+                Item = this.AttributeValues,
             };
 
-            await client.PutItemAsync(request);
+            await client.PutItemAsync(request);  
+
         }
 
         public async void DeleteItem()
@@ -199,5 +242,18 @@ namespace aws.utils.dynamodb
             await client.DeleteItemAsync(request);
         }
 
+        private List<T> ParseItems<T>(IEnumerable<Dictionary<string, AttributeValue>> items) 
+            where T : class, new()
+        {
+            var resultList = new List<T>();
+
+            foreach (var item in items)
+            {
+                var instance = this.Context.FromDocument<T>(Document.FromAttributeMap(item));
+                resultList.Add(instance);
+            }
+
+            return resultList;
+        }
     }
 }

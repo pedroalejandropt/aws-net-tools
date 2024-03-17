@@ -145,7 +145,7 @@ namespace aws.utils.dynamodb
         }
 
         public DynamoDBCommandBuilder SetAttrNotExistCondition(string attribute) {
-            this.ConditionExpression = $"attribute_not_exists({attribute})" 
+            this.ConditionExpression = $"attribute_not_exists({attribute})"; 
             return this;
         }
 
@@ -221,7 +221,7 @@ namespace aws.utils.dynamodb
             return ParseItems<T>(response.Items);
         }
 
-        public async Task AddUpdateItem()
+        public async void AddUpdateItem()
         {
             AmazonDynamoDBClient client = new AmazonDynamoDBClient();
 
